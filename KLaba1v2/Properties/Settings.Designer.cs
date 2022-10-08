@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace KLaba1v2.Properties {
+namespace GraphDesigner.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]

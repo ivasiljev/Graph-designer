@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace KLaba1v2
+namespace GraphDesigner
 {
     public partial class AdjacencyMatrix : Form
     {

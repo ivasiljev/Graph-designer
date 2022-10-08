@@ -5,30 +5,41 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KLaba1v2
+namespace GraphDesigner
 {
     public class Net
     {
-        //public const bool AUTO_INCREMENT_VALUE_ENABLED = true;
         private int autoincrementCounter = 0;
+        private int count;
+        private int sum;
 
         public readonly bool IsDirectedGraph = false;
 
-        private List<Node> nodes;
-        private int count;
-        private int sum;
+        public List<Node> Nodes;
 
         public Net(bool isDirectedGraph = false)
         {
             count = 0;
-            nodes = new List<Node>();
+            Nodes = new List<Node>();
             IsDirectedGraph = isDirectedGraph;
         }
 
-        public void AddNode(int value)
+        public string AddNode(int id, int value = 0)
         {
-            Node newNode = new Node(value);
-            nodes.Add(newNode);
+            if (Nodes.Any(n => n.Id == id)) return $"Не удалось создать элемент с id = {id}, так как элемент с таким id уже существует";
+
+            Node newNode = new Node(id, value);
+            Nodes.Add(newNode);
+            count++;
+            sum += value;
+
+            return "";
+        }
+
+        public void AddNode(int value = 0)
+        {
+            Node newNode = new Node(autoincrementCounter++, value);
+            Nodes.Add(newNode);
             count++;
             sum += value;
         }
@@ -44,8 +55,8 @@ namespace KLaba1v2
                 DeleteConnection(i, ind);
             }
 
-            sum -= nodes[ind].value;
-            nodes.RemoveAt(ind);
+            sum -= Nodes[ind].Value;
+            Nodes.RemoveAt(ind);
             count--;
 
             return "";
@@ -55,11 +66,11 @@ namespace KLaba1v2
         {
             if (startNode >= count || startNode < 0) return $"Элемент с индексом '{startNode}' не найден";
             if (endNode >= count || endNode < 0) return $"Элемент с индексом '{endNode}' не найден";
-            if (nodes[startNode].cons.Contains(nodes[endNode])) return $"Заданная связь '{startNode}' - '{endNode}' уже существует";
+            if (Nodes[startNode].Connections.Contains(Nodes[endNode])) return $"Заданная связь '{startNode}' - '{endNode}' уже существует";
 
-            nodes[startNode].AddConnection(nodes[endNode]);
+            Nodes[startNode].AddConnection(Nodes[endNode]);
             if (!IsDirectedGraph)
-                nodes[endNode].AddConnection(nodes[startNode]);
+                Nodes[endNode].AddConnection(Nodes[startNode]);
 
             return "";
         }
@@ -68,11 +79,11 @@ namespace KLaba1v2
         {
             if (startNode >= count || startNode < 0) return $"Элемент с индексом '{startNode}' не найден";
             if (endNode >= count || endNode < 0) return $"Элемент с индексом '{endNode}' не найден";
-            if (!nodes[startNode].cons.Contains(nodes[endNode])) return $"Заданная связь '{startNode}' - '{endNode}' не найдена";
+            if (!Nodes[startNode].Connections.Contains(Nodes[endNode])) return $"Заданная связь '{startNode}' - '{endNode}' не найдена";
 
-            nodes[startNode].DeleteConnection(nodes[endNode]);
+            Nodes[startNode].DeleteConnection(Nodes[endNode]);
             if (!IsDirectedGraph)
-                nodes[endNode].DeleteConnection(nodes[startNode]);
+                Nodes[endNode].DeleteConnection(Nodes[startNode]);
 
             return "";
         }
@@ -81,8 +92,8 @@ namespace KLaba1v2
         {
             if (ind >= count || ind < 0) return $"Элемент с индексом '{ind}' не найден";
 
-            sum -= nodes[ind].value - newValue;
-            nodes[ind].ChangeValue(newValue);
+            sum -= Nodes[ind].Value - newValue;
+            Nodes[ind].ChangeValue(newValue);
 
             return "";
         }
@@ -90,9 +101,9 @@ namespace KLaba1v2
         public int Count() => count;
         public int Sum() => sum;
 
-        public int GetValue(int ind) => nodes[ind].value;
-        public Node GetNode(int ind) => nodes[ind];
-        public int GetIndex(Node node) => nodes.IndexOf(node);
+        public int GetValue(int ind) => Nodes[ind].Value;
+        public Node GetNode(int ind) => Nodes[ind];
+        public int GetIndex(Node node) => Nodes.IndexOf(node);
 
         public List<List<int>> GetAdjacencyMatrix()
         {
@@ -101,9 +112,9 @@ namespace KLaba1v2
             for (int i = 0; i < count; i++)
             {
                 matrix[i] = new List<int>(new int[count]);
-                for (int j = 0; j < nodes[i].cons.Count; j++)
+                for (int j = 0; j < Nodes[i].Connections.Count; j++)
                 {
-                    int targetNodeIndex = nodes.IndexOf(nodes[i].cons[j]);
+                    int targetNodeIndex = Nodes.IndexOf(Nodes[i].Connections[j]);
                     matrix[i][targetNodeIndex] = 1;
                 }
             }
@@ -115,28 +126,29 @@ namespace KLaba1v2
     public class Node
     {
         public int Id;
-        public int value;
-        public List<Node> cons;
+        public int Value;
+        public List<Node> Connections;
 
-        public Node(int x)
+        public Node(int id, int value)
         {
-            value = x;
-            cons = new List<Node>();
+            Id = id;
+            Value = value;
+            Connections = new List<Node>();
         }
 
         public void AddConnection(Node a)
         {
-            cons.Add(a);
+            Connections.Add(a);
         }
 
         public void DeleteConnection(Node a)
         {
-            cons.Remove(a);
+            Connections.Remove(a);
         }
 
         public void ChangeValue(int newValue)
         {
-            value = newValue;
+            Value = newValue;
         }
     }
 }

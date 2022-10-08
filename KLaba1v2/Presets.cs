@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KLaba1v2
+namespace GraphDesigner
 {
     public static class Presets
     {

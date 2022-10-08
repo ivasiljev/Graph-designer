@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace KLaba1v2
+namespace GraphDesigner
 {
     static class Program
     {

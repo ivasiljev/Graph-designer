@@ -1,4 +1,4 @@
-﻿namespace KLaba1v2
+﻿namespace GraphDesigner
 {
     partial class Form1
     {
