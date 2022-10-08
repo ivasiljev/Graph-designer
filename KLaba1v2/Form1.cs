@@ -14,24 +14,24 @@ namespace GraphDesigner
 {
     public partial class Form1 : Form
     {
-        private Net net;
+        private DGraph graph;
 
-        public Net Net 
+        public DGraph Graph 
         { 
-            get => net; 
+            get => graph; 
             set
             {
-                if (net != null) UnsubscribeFromNetEvents();
-                net = value;
+                if (graph != null) UnsubscribeFromGraphEvents();
+                graph = value;
                 SyncGraphViewer();
                 UpdateView();
-                SubscribeOnNetEvents();
+                SubscribeOnGraphEvents();
                 GraphChanged();
             }
         }
         private Form adjacencyMatrixForm;
 
-        public delegate void AdjacencyMatrixUpdatedHandler(Net net);
+        public delegate void AdjacencyMatrixUpdatedHandler(DGraph graph);
         public event AdjacencyMatrixUpdatedHandler AdjacencyMatrixUpdatedEventHandler;
 
         public Form1()
@@ -42,12 +42,12 @@ namespace GraphDesigner
                 presetsDropdown.Items.Add(preset.Name);
             presetsDropdown.SelectedIndex = 0;
 
-            Net = new Net(true);
+            Graph = new DGraph(true);
         }
 
         private void UpdateView()
         {
-            if (net.IsDirectedGraph)
+            if (graph.IsDirectedGraph)
             {
                 lblArrow1.Text = "→";
                 lblArrow2.Text = "→";
@@ -66,10 +66,10 @@ namespace GraphDesigner
         private void SyncGraphViewer()
         {
             Graph graph = new Graph();
-            foreach (var node in net.Nodes)
+            foreach (var node in Graph.Nodes)
                 graph.AddNode(node.Id.ToString());
 
-            foreach (var node in net.Nodes)
+            foreach (var node in Graph.Nodes)
             {
                 foreach (var connection in node.Connections)
                     graph.AddEdge(node.Id.ToString(), connection.Id.ToString());
@@ -78,32 +78,41 @@ namespace GraphDesigner
             gViewer.Graph = graph;
         }
 
-        private void SubscribeOnNetEvents()
+        private void SubscribeOnGraphEvents()
         {
-            net.OnNodeAdded += NodeAdded;
-            net.OnNodeDeleted += NodeDeleted;
-            net.OnConnectionAdded += ConnectionAdded;
-            net.OnConnectionDeleted += ConnectionDeleted;
-            net.OnGraphChanged += GraphChanged;
+            Graph.OnNodeAdded += NodeAdded;
+            Graph.OnNodeDeleted += NodeDeleted;
+            Graph.OnConnectionAdded += ConnectionAdded;
+            Graph.OnConnectionDeleted += ConnectionDeleted;
+            Graph.OnGraphChanged += GraphChanged;
         }
 
-        private void UnsubscribeFromNetEvents()
+        private void UnsubscribeFromGraphEvents()
         {
-            net.OnNodeAdded -= NodeAdded;
-            net.OnNodeDeleted -= NodeDeleted;
-            net.OnConnectionAdded -= ConnectionAdded;
-            net.OnConnectionDeleted -= ConnectionDeleted;
-            net.OnGraphChanged -= GraphChanged;
+            Graph.OnNodeAdded -= NodeAdded;
+            Graph.OnNodeDeleted -= NodeDeleted;
+            Graph.OnConnectionAdded -= ConnectionAdded;
+            Graph.OnConnectionDeleted -= ConnectionDeleted;
+            Graph.OnGraphChanged -= GraphChanged;
         }
 
         private void GraphChanged()
         {
+            foreach (var entity in gViewer.Entities)
+                if (entity.MarkedForDragging)
+                {
+                    entity.MarkedForDragging = false;
+                }
+
             gViewer.Graph = gViewer.Graph; // Force redrawing graph
 
             if (Application.OpenForms.OfType<AdjacencyMatrix>().Count() > 0)
             {
-                AdjacencyMatrixUpdatedEventHandler?.Invoke(net);
+                AdjacencyMatrixUpdatedEventHandler?.Invoke(graph);
             }
+
+            if (tbCountElems.Text != gViewer.Graph.NodeCount.ToString())
+                tbCountElems.Text = gViewer.Graph.NodeCount.ToString(); // Update nodes count
         }
 
         private void ConnectionDeleted(Tuple<Node, Node> connection)
@@ -133,33 +142,35 @@ namespace GraphDesigner
 
         private void btnAddElem_Click(object sender, EventArgs e)
         {
-            var newNode = net.AddNode();
-            gViewer.Graph.AddNode(newNode.Id.ToString());
+            Node newNode = null;
+            ErrorHandler.SafeExec(() => { newNode = graph.AddNode(); });
+            if (newNode != null)
+                gViewer.Graph.AddNode(newNode.Id.ToString());
         }
 
-        private void btnCreateNet_Click(object sender, EventArgs e)
+        private void btnCreateGraph_Click(object sender, EventArgs e)
         {
-            Net = new Net();
+            Graph = new DGraph();
         }
 
         private void btnCreateDirectedGraph_Click(object sender, EventArgs e)
         {
-            Net = new Net(true);
+            Graph = new DGraph(true);
         }
 
         private void btnDelElem_Click(object sender, EventArgs e)
         {
-            net.DeleteNodeById(Convert.ToInt32(tbDelElem.Text));
+            ErrorHandler.SafeExec(() => Graph.DeleteNodeById(Convert.ToInt32(tbDelElem.Text)));
         }
 
         private void btnAddCon_Click(object sender, EventArgs e)
         {
-            net.AddConnectionByIds(Convert.ToInt32(tbAddCon1.Text), Convert.ToInt32(tbAddCon2.Text));
+            ErrorHandler.SafeExec(() => Graph.AddConnectionByIds(Convert.ToInt32(tbAddCon1.Text), Convert.ToInt32(tbAddCon2.Text)));
         }
 
         private void btnDelCon_Click(object sender, EventArgs e)
         {
-            net.DeleteConnectionByIds(Convert.ToInt32(tbDelCon1.Text), Convert.ToInt32(tbDelCon2.Text));
+            ErrorHandler.SafeExec(() => Graph.DeleteConnectionByIds(Convert.ToInt32(tbDelCon1.Text), Convert.ToInt32(tbDelCon2.Text)));
         }
 
         private void btnShowAdjacencyMatrix_Click(object sender, EventArgs e)
@@ -167,12 +178,12 @@ namespace GraphDesigner
             if (Application.OpenForms.OfType<AdjacencyMatrix>().Count() > 0)
                 adjacencyMatrixForm.Close();
 
-            adjacencyMatrixForm = new AdjacencyMatrix(net);
+            adjacencyMatrixForm = new AdjacencyMatrix(Graph);
             adjacencyMatrixForm.StartPosition = FormStartPosition.CenterScreen;
             adjacencyMatrixForm.Show(this);
         }
 
-        List<DrawingColor> colors = new List<DrawingColor>()
+        private List<DrawingColor> colors = new List<DrawingColor>()
         {
             DrawingColor.Red,
             DrawingColor.Green,
@@ -186,25 +197,36 @@ namespace GraphDesigner
 
         private void btnExecuteMalgrangeAlgo_Click(object sender, EventArgs e)
         {
-            var malgrangeAlgo = new MalgrangeAlgorithm();
-            var malgrangeAlgorithmResult = malgrangeAlgo.Execute(net);
+            ExecuteMalgrangeAlgorithm();
+        }
 
-            var currentColorIndex = 0;
-            foreach (var net in malgrangeAlgorithmResult)
+        private List<DGraph> ExecuteMalgrangeAlgorithm(bool skipRender = false)
+        {
+            var random = new Random();
+            var malgrangeAlgo = new MalgrangeAlgorithm();
+            var malgrangeAlgorithmResult = malgrangeAlgo.Execute(graph);
+
+            if (!skipRender)
             {
-                foreach (var node in net.Nodes)
+                var currentColorIndex = 0;
+                foreach (var subgraph in malgrangeAlgorithmResult)
                 {
-                    var foundNode = gViewer.Graph.FindNode(node.Id.ToString());
-                    foundNode.Attr.FillColor = colors[currentColorIndex];
+                    foreach (var node in subgraph.Nodes)
+                    {
+                        var foundNode = gViewer.Graph.FindNode(node.Id.ToString());
+                        foundNode.Attr.FillColor = currentColorIndex < colors.Count ? colors[currentColorIndex] : new DrawingColor((byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256));
+                    }
+                    currentColorIndex++;
                 }
-                currentColorIndex++;
+                gViewer.Refresh();
             }
-            gViewer.Refresh();
+
+            return malgrangeAlgorithmResult;
         }
 
         private void btnUsePreset_Click(object sender, EventArgs e)
         {
-            Net = Presets.Get()[presetsDropdown.SelectedIndex].Execute();
+            Graph = Presets.Get()[presetsDropdown.SelectedIndex].Execute();
         }
 
         private void gViewer_EdgeAdded(object sender, EventArgs e)
@@ -213,8 +235,75 @@ namespace GraphDesigner
             var startNodeId = int.Parse(edge.Source);
             var endNodeId = int.Parse(edge.Target);
 
-            net.Silent = true;
-            net.AddConnectionByIds(startNodeId, endNodeId);
+            Graph.Silent = true;
+            ErrorHandler.SafeExec(() => Graph.AddConnectionByIds(startNodeId, endNodeId));
+        }
+
+        private void gViewer_EdgeRemoved(object sender, EventArgs e)
+        {
+            var edge = (Edge)sender;
+            var startNodeId = int.Parse(edge.Source);
+            var endNodeId = int.Parse(edge.Target);
+
+            Graph.Silent = true;
+            ErrorHandler.SafeExec(() => Graph.DeleteConnectionByIds(startNodeId, endNodeId));
+        }
+
+        private void btnGenerateGraph_Click(object sender, EventArgs e)
+        {
+            var countOfNodes = int.Parse(tbCountNodesToGenerate.Text);
+            var edgeProbability = int.Parse(tbProbabilityOfEdge.Text);
+
+            Graph = new DGraph(countOfNodes, edgeProbability, true);
+
+            ExecuteMalgrangeAlgorithm();
+        }
+
+        private async void gViewer_MouseUp(object sender, MouseEventArgs e)
+        {
+            await Task.Delay(10); // If no delay method calls before elements marked selected
+            var selectedNodes = new List<IViewerNode>();
+            foreach (var entity in gViewer.Entities)
+                if (entity.MarkedForDragging && entity is IViewerNode viewerNode)
+                {
+                    selectedNodes.Add(viewerNode);
+                }
+
+            var selectedNodeId = "-1";
+            var secondNodeId = "-1";
+            if (selectedNodes.Count == 1 || selectedNodes.Count == 2)
+            {
+                selectedNodeId = (gViewer.SelectedObject as Microsoft.Msagl.Drawing.Node).Id;
+            }
+            if (selectedNodes.Count == 2)
+            {
+                secondNodeId = selectedNodes.First(n => n.Node.Id != selectedNodeId).Node.Id;
+                (selectedNodeId, secondNodeId) = (secondNodeId, selectedNodeId);
+            }
+
+
+            if (gViewer.SelectedObject is Edge edge)
+            {
+                selectedNodeId = edge.Source;
+                secondNodeId = edge.Target;
+            }
+
+
+            if (selectedNodeId != "-1")
+            {
+                tbDelElem.Text = selectedNodeId;
+                tbDelCon1.Text = selectedNodeId;
+                tbAddCon1.Text = selectedNodeId;
+            }
+            if (selectedNodeId != "-1" && secondNodeId == "-1")
+            {
+                secondNodeId = selectedNodeId;
+            }
+            if (secondNodeId != "-1")
+            {
+                tbDelCon2.Text = secondNodeId;
+                tbAddCon2.Text = secondNodeId;
+            }
         }
     }
 }

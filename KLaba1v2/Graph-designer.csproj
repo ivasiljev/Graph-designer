@@ -87,7 +87,7 @@
     </Compile>
     <Compile Include="GraphOperationException.cs" />
     <Compile Include="MalgrangeAlgorithm.cs" />
-    <Compile Include="Net.cs" />
+    <Compile Include="DGraph.cs" />
     <Compile Include="Presets.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

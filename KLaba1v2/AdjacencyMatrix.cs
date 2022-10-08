@@ -12,16 +12,16 @@ namespace GraphDesigner
 {
     public partial class AdjacencyMatrix : Form
     {
-        private Net net;
+        private DGraph graph;
 
-        public AdjacencyMatrix(Net net)
+        public AdjacencyMatrix(DGraph graph)
         {
             InitializeComponent();
 
             adjacencyMatrixTable.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
             adjacencyMatrixTable.ScrollBars = ScrollBars.None;
 
-            this.net = net;
+            this.graph = graph;
             Shown += AdjacencyMatrix_Shown;
             FormClosed += AdjacencyMatrix_FormClosed;
         }
@@ -37,16 +37,16 @@ namespace GraphDesigner
             UpdateConnectionTable();
         }
 
-        private void AdjacencyMatrix_AdjecencyMatrixUpdatedEventHandler(Net newNet)
+        private void AdjacencyMatrix_AdjecencyMatrixUpdatedEventHandler(DGraph newGraph)
         {
-            if (newNet != net)
-                net = newNet;
+            if (newGraph != graph)
+                graph = newGraph;
             UpdateConnectionTable();
         }
 
         private void UpdateConnectionTable()
         {
-            var g = net.GetAdjacencyMatrix();
+            var g = graph.GetAdjacencyMatrix();
 
             adjacencyMatrixTable.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.DisplayedCellsExceptHeaders;
             adjacencyMatrixTable.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;

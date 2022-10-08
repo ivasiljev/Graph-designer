@@ -12,58 +12,75 @@ namespace GraphDesigner
 
         public MalgrangeAlgorithm() { }
 
-        public List<Net> Execute(Net net)
+        public List<DGraph> Execute(DGraph graph)
         {
-            var result = new List<Net>();
-            N = net.Nodes.Count;
-            var g = net.GetAdjacencyMatrix();
+            var result = new List<DGraph>();
+            N = graph.Nodes.Count;
+            var g = graph.GetAdjacencyMatrix();
+            var g_mirrored = GetMirroredG(g);
 
             List<int> nodes = new List<int>(N);
             for (int i = 0; i < N; i++)
                 nodes.Add(i);
 
-            while (nodes.Count != 0)
+            while (nodes.Count != 0) // Повторяем шаги до тех пор пока в графе есть вершины
             {
-                var component = FindComponent(g, nodes[0]);
+                var component = FindComponent(g, g_mirrored, nodes[0]);
 
+                // Сохраняем полученный подграф как новый граф
+                var subgraph = new DGraph(graph.IsDirectedGraph);
                 foreach (var node in component)
-                    nodes.Remove(node);
-
-                var newNet = new Net(net.IsDirectedGraph);
-                foreach (var node in component)
-                    newNet.AddNode(net.Nodes[node].Id);
+                    ErrorHandler.SafeExec(() => subgraph.AddNode(graph.Nodes[node].Id));
 
                 for (int i = 0; i < component.Count; i++)
                     for (int j = 0; j < component.Count; j++)
                         if (g[component[i]][component[j]] == 1)
-                            newNet.AddConnection(j, i); // j and i swapped coz we have mirrored g
+                            ErrorHandler.SafeExec(() => subgraph.AddConnection(i, j));
 
-                result.Add(newNet);
+                // Шаг 3. Из исходного графа удалим вершины входящие в состам выделенного сильно связного подграфа
+                foreach (var node in component)
+                {
+                    for (int i = 0; i < N; i++)
+                    {
+                        g[node][i] = 0;
+                        g[i][node] = 0;
+                    }
+                    nodes.Remove(node);
+                }
+
+                result.Add(subgraph);
             }
 
-            return result;
+            return result; // Возвращаем список сильно связных подграфов исходной графа
         }
 
-        private List<int> FindComponent(List<List<int>> g, int v)
+        private List<int> FindComponent(List<List<int>> g, List<List<int>> g_mirrored, int v)
         {
             List<int> transitiveClosure = new List<int>(new int[N]);
             List<int> revertedTransitiveClosure = new List<int>(new int[N]);
 
+            // Шаг 1(+). Находим прямое транзитивное замыкание
             FindTransitiveClosures(g, transitiveClosure, v, 1);
 
-            for (int i = 0; i < N - 1; i++)
-                for (int j = i + 1; j < N; j++)
-                    (g[i][j], g[j][i]) = (g[j][i], g[i][j]); // Отражаем по главной диагонали
-            FindTransitiveClosures(g, revertedTransitiveClosure, v, 1);
+            // Шаг 1(-). Находим обратное транзитивное замыкание
+            FindTransitiveClosures(g_mirrored, revertedTransitiveClosure, v, 1);
 
+            // Шаг 2. Находим Множество образуемое пересечением множеств из Шага 1(+) и Шага 1(-)
             var result = new List<int>();
             for (int i = 0; i < N; i++)
                 if (transitiveClosure[i] != 0 && revertedTransitiveClosure[i] != 0)
                     result.Add(i);
-            return result;
+
+            return result; // Результатом первых двух шагов будет сильно связный подграф
         }
 
-        private void FindTransitiveClosures(List<List<int>>g, List<int> transitiveArray, int v, int deep)
+        /* Сохраняет в transitiveArray значения указывающие сколько нужно сделать переходов, 
+         * чтобы попасть в данную вершину из вершины v (прямое транзитивное замыкание).
+         * 
+         * Если передать в g вместо обычной матрицы смежности, матрицу смежности отраженную
+         * по главной диагонали, то получим количество переходов необходимое, чтобы попасть 
+         * из данной вершины в вершину v (обратное транзитивное замыкание). */
+        private void FindTransitiveClosures(List<List<int>>g, List<int> transitiveArray, int v, int deep) // Just dfs with deep counter
         {
             transitiveArray[v] = deep;
 
@@ -74,6 +91,22 @@ namespace GraphDesigner
                     FindTransitiveClosures(g, transitiveArray, i, deep + 1);
                 }
             }
+        }
+
+        private List<List<int>> GetMirroredG(List<List<int>> g)
+        {
+            List<List<int>> matrix = new List<List<int>>(new List<int>[N]);
+
+            for (int i = 0; i < N; i++)
+            {
+                matrix[i] = new List<int>(new int[N]);
+                for (int j = 0; j < N; j++)
+                {
+                    matrix[i][j] = g[j][i];
+                }
+            }
+
+            return matrix;
         }
     }
 }

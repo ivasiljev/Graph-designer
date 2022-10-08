@@ -9,7 +9,7 @@ using System.Windows.Forms;
 
 namespace GraphDesigner
 {
-    public class Net
+    public class DGraph
     {
         private int autoincrementCounter = 0;
 
@@ -33,10 +33,18 @@ namespace GraphDesigner
         public delegate void GraphChangedHandler();
         public event GraphChangedHandler OnGraphChanged;
 
-        public Net(bool isDirectedGraph = false)
+        public DGraph(bool isDirectedGraph = false)
         {
             Nodes = new List<Node>();
             IsDirectedGraph = isDirectedGraph;
+        }
+
+        public DGraph(int nodesCount, int edgeProbability, bool isDirectedGraph = false)
+        {
+            Nodes = new List<Node>();
+            IsDirectedGraph = isDirectedGraph;
+
+            GenerateGraph(nodesCount, edgeProbability);
         }
 
         public Node AddNode(int id)
@@ -70,7 +78,8 @@ namespace GraphDesigner
             {
                 if (i == ind) continue;
 
-                DeleteConnection(i, ind);
+                if (Nodes[i].Connections.Contains(Nodes[ind]))
+                    DeleteConnection(i, ind);
             }
 
             var nodeToDel = Nodes[ind];
@@ -184,6 +193,25 @@ namespace GraphDesigner
                 return true;
             }
             return false;
+        }
+
+        private void GenerateGraph(int nodesCount, int edgeProbability)
+        {
+            var random = new Random();
+
+            for (int i = 0; i < nodesCount; i++)
+                AddNode();
+
+            for (int i = 0; i < nodesCount; i++)
+            {
+                for (int j = 0; j < nodesCount; j++)
+                {
+                    if (i == j) continue;
+
+                    if (random.Next(100) <= edgeProbability)
+                        AddConnection(i, j);
+                }
+            }
         }
     }
 

@@ -56,6 +56,11 @@
             this.lblArrow2 = new System.Windows.Forms.Label();
             this.radioGraphType1 = new System.Windows.Forms.RadioButton();
             this.radioGraphType2 = new System.Windows.Forms.RadioButton();
+            this.btnGenerateGraph1 = new System.Windows.Forms.Button();
+            this.tbCountNodesToGenerate = new System.Windows.Forms.TextBox();
+            this.tbProbabilityOfEdge = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // btnCreateNet
@@ -66,7 +71,7 @@
             this.btnCreateNet.TabIndex = 0;
             this.btnCreateNet.Text = "Создать двунаправленный граф";
             this.btnCreateNet.UseVisualStyleBackColor = true;
-            this.btnCreateNet.Click += new System.EventHandler(this.btnCreateNet_Click);
+            this.btnCreateNet.Click += new System.EventHandler(this.btnCreateGraph_Click);
             // 
             // btnAddElem
             // 
@@ -150,8 +155,9 @@
             // 
             // label4
             // 
+            this.label4.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(1031, 97);
+            this.label4.Location = new System.Drawing.Point(1281, 97);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(107, 13);
             this.label4.TabIndex = 17;
@@ -209,8 +215,9 @@
             // 
             // tbCountElems
             // 
+            this.tbCountElems.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.tbCountElems.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.tbCountElems.Location = new System.Drawing.Point(1137, 94);
+            this.tbCountElems.Location = new System.Drawing.Point(1387, 94);
             this.tbCountElems.Name = "tbCountElems";
             this.tbCountElems.ReadOnly = true;
             this.tbCountElems.Size = new System.Drawing.Size(59, 20);
@@ -230,7 +237,7 @@
             // btnShowAdjacencyMatrix
             // 
             this.btnShowAdjacencyMatrix.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnShowAdjacencyMatrix.Location = new System.Drawing.Point(986, 14);
+            this.btnShowAdjacencyMatrix.Location = new System.Drawing.Point(1236, 10);
             this.btnShowAdjacencyMatrix.Name = "btnShowAdjacencyMatrix";
             this.btnShowAdjacencyMatrix.Size = new System.Drawing.Size(210, 20);
             this.btnShowAdjacencyMatrix.TabIndex = 30;
@@ -241,7 +248,7 @@
             // btnExecuteMalgrangeAlgo
             // 
             this.btnExecuteMalgrangeAlgo.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnExecuteMalgrangeAlgo.Location = new System.Drawing.Point(986, 43);
+            this.btnExecuteMalgrangeAlgo.Location = new System.Drawing.Point(1236, 39);
             this.btnExecuteMalgrangeAlgo.Name = "btnExecuteMalgrangeAlgo";
             this.btnExecuteMalgrangeAlgo.Size = new System.Drawing.Size(210, 20);
             this.btnExecuteMalgrangeAlgo.TabIndex = 31;
@@ -280,7 +287,7 @@
             this.gViewer.SaveButtonVisible = true;
             this.gViewer.SaveGraphButtonVisible = true;
             this.gViewer.SaveInVectorFormatEnabled = true;
-            this.gViewer.Size = new System.Drawing.Size(1208, 622);
+            this.gViewer.Size = new System.Drawing.Size(1458, 622);
             this.gViewer.TabIndex = 33;
             this.gViewer.TightOffsetForRouting = 0.125D;
             this.gViewer.ToolBarIsVisible = true;
@@ -290,6 +297,8 @@
             this.gViewer.ZoomF = 1D;
             this.gViewer.ZoomWindowThreshold = 0.05D;
             this.gViewer.EdgeAdded += new System.EventHandler(this.gViewer_EdgeAdded);
+            this.gViewer.EdgeRemoved += new System.EventHandler(this.gViewer_EdgeRemoved);
+            this.gViewer.MouseUp += new System.Windows.Forms.MouseEventHandler(this.gViewer_MouseUp);
             // 
             // presetsDropdown
             // 
@@ -349,11 +358,60 @@
             this.radioGraphType2.TabIndex = 40;
             this.radioGraphType2.UseVisualStyleBackColor = true;
             // 
+            // btnGenerateGraph1
+            // 
+            this.btnGenerateGraph1.Location = new System.Drawing.Point(960, 9);
+            this.btnGenerateGraph1.Name = "btnGenerateGraph1";
+            this.btnGenerateGraph1.Size = new System.Drawing.Size(92, 59);
+            this.btnGenerateGraph1.TabIndex = 35;
+            this.btnGenerateGraph1.Text = "Сгенерировать граф";
+            this.btnGenerateGraph1.UseVisualStyleBackColor = true;
+            this.btnGenerateGraph1.Click += new System.EventHandler(this.btnGenerateGraph_Click);
+            // 
+            // tbCountNodesToGenerate
+            // 
+            this.tbCountNodesToGenerate.Location = new System.Drawing.Point(848, 17);
+            this.tbCountNodesToGenerate.Name = "tbCountNodesToGenerate";
+            this.tbCountNodesToGenerate.Size = new System.Drawing.Size(33, 20);
+            this.tbCountNodesToGenerate.TabIndex = 41;
+            this.tbCountNodesToGenerate.Text = "15";
+            // 
+            // tbProbabilityOfEdge
+            // 
+            this.tbProbabilityOfEdge.Location = new System.Drawing.Point(848, 51);
+            this.tbProbabilityOfEdge.Name = "tbProbabilityOfEdge";
+            this.tbProbabilityOfEdge.Size = new System.Drawing.Size(33, 20);
+            this.tbProbabilityOfEdge.TabIndex = 41;
+            this.tbProbabilityOfEdge.Text = "15";
+            // 
+            // label1
+            // 
+            this.label1.Font = new System.Drawing.Font("Comic Sans MS", 8.25F, System.Drawing.FontStyle.Italic, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.label1.Location = new System.Drawing.Point(881, 10);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(73, 35);
+            this.label1.TabIndex = 42;
+            this.label1.Text = "Количество вершин";
+            // 
+            // label2
+            // 
+            this.label2.Font = new System.Drawing.Font("Comic Sans MS", 8.25F, System.Drawing.FontStyle.Italic, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.label2.Location = new System.Drawing.Point(881, 46);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(73, 35);
+            this.label2.TabIndex = 43;
+            this.label2.Text = "Вероятность ребра";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1208, 622);
+            this.ClientSize = new System.Drawing.Size(1458, 622);
+            this.Controls.Add(this.btnGenerateGraph1);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this.tbProbabilityOfEdge);
+            this.Controls.Add(this.tbCountNodesToGenerate);
             this.Controls.Add(this.radioGraphType2);
             this.Controls.Add(this.radioGraphType1);
             this.Controls.Add(this.tbDelCon1);
@@ -417,6 +475,11 @@
         private System.Windows.Forms.Label lblArrow2;
         private System.Windows.Forms.RadioButton radioGraphType1;
         private System.Windows.Forms.RadioButton radioGraphType2;
+        private System.Windows.Forms.Button btnGenerateGraph1;
+        private System.Windows.Forms.TextBox tbCountNodesToGenerate;
+        private System.Windows.Forms.TextBox tbProbabilityOfEdge;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label label2;
     }
 }
 
