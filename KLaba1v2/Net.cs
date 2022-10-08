@@ -1,117 +1,164 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace GraphDesigner
 {
     public class Net
     {
         private int autoincrementCounter = 0;
-        private int count;
-        private int sum;
 
         public readonly bool IsDirectedGraph = false;
 
-        public List<Node> Nodes;
+        public List<Node> Nodes { get; set; }
+        public bool Silent { get; set; } = false;
+
+        public delegate void NodeAddedHandler(Node node);
+        public event NodeAddedHandler OnNodeAdded;
+
+        public delegate void NodeDeletedHandler(Node node);
+        public event NodeDeletedHandler OnNodeDeleted;
+
+        public delegate void ConnectionAddedHandler(Tuple<Node, Node> connection);
+        public event ConnectionAddedHandler OnConnectionAdded;
+
+        public delegate void ConnectionDeletedHandler(Tuple<Node, Node> connection);
+        public event ConnectionDeletedHandler OnConnectionDeleted;
+
+        public delegate void GraphChangedHandler();
+        public event GraphChangedHandler OnGraphChanged;
 
         public Net(bool isDirectedGraph = false)
         {
-            count = 0;
             Nodes = new List<Node>();
             IsDirectedGraph = isDirectedGraph;
         }
 
-        public string AddNode(int id, int value = 0)
+        public Node AddNode(int id)
         {
-            if (Nodes.Any(n => n.Id == id)) return $"Не удалось создать элемент с id = {id}, так как элемент с таким id уже существует";
+            if (Nodes.Any(n => n.Id == id)) throw new GraphOperationException($"Не удалось создать элемент с id = {id}, так как элемент с таким id уже существует");
 
-            Node newNode = new Node(id, value);
+            Node newNode = new Node(id);
             Nodes.Add(newNode);
-            count++;
-            sum += value;
 
-            return "";
+            if (id >= autoincrementCounter) autoincrementCounter = id + 1;
+
+            if (!IsSilent())
+            {
+                OnNodeAdded?.Invoke(newNode);
+                OnGraphChanged?.Invoke();
+            }
+
+            return newNode;
         }
 
-        public void AddNode(int value = 0)
+        public Node AddNode()
         {
-            Node newNode = new Node(autoincrementCounter++, value);
-            Nodes.Add(newNode);
-            count++;
-            sum += value;
+            return AddNode(autoincrementCounter);
         }
 
-        public string DeleteNode(int ind)
+        public void DeleteNode(int ind)
         {
-            if (ind >= count || ind < 0) return $"Элемент с индексом '{ind}' не найден";
+            if (ind >= Nodes.Count || ind < 0) throw new GraphOperationException($"Элемент с индексом '{ind}' не найден");
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < Nodes.Count; i++)
             {
                 if (i == ind) continue;
 
                 DeleteConnection(i, ind);
             }
 
-            sum -= Nodes[ind].Value;
-            Nodes.RemoveAt(ind);
-            count--;
+            var nodeToDel = Nodes[ind];
+            Nodes.Remove(nodeToDel);
 
-            return "";
+            if (!IsSilent())
+            {
+                OnNodeDeleted?.Invoke(nodeToDel);
+                OnGraphChanged?.Invoke();
+            }
         }
 
-        public string AddConnection(int startNode, int endNode)
+        public void DeleteNodeById(int id)
         {
-            if (startNode >= count || startNode < 0) return $"Элемент с индексом '{startNode}' не найден";
-            if (endNode >= count || endNode < 0) return $"Элемент с индексом '{endNode}' не найден";
-            if (Nodes[startNode].Connections.Contains(Nodes[endNode])) return $"Заданная связь '{startNode}' - '{endNode}' уже существует";
+            var targetNode = GetNodeById(id);
 
-            Nodes[startNode].AddConnection(Nodes[endNode]);
+            DeleteNode(Nodes.IndexOf(targetNode));
+        }
+
+        public void AddConnection(Node startNode, Node endNode)
+        {
+            if (startNode.Connections.Contains(endNode)) throw new GraphOperationException($"Заданная связь '{startNode.Id}' - '{endNode.Id}' уже существует");
+
+            startNode.AddConnection(endNode);
             if (!IsDirectedGraph)
-                Nodes[endNode].AddConnection(Nodes[startNode]);
+                endNode.AddConnection(startNode);
 
-            return "";
+            if (!IsSilent())
+            {
+                OnConnectionAdded?.Invoke(new Tuple<Node, Node>(startNode, endNode));
+                OnGraphChanged?.Invoke();
+            }
         }
 
-        public string DeleteConnection(int startNode, int endNode)
+        public void AddConnection(int startNodeIndex, int endNodeIndex)
         {
-            if (startNode >= count || startNode < 0) return $"Элемент с индексом '{startNode}' не найден";
-            if (endNode >= count || endNode < 0) return $"Элемент с индексом '{endNode}' не найден";
-            if (!Nodes[startNode].Connections.Contains(Nodes[endNode])) return $"Заданная связь '{startNode}' - '{endNode}' не найдена";
+            if (startNodeIndex >= Nodes.Count || startNodeIndex < 0) throw new GraphOperationException($"Элемент с индексом '{startNodeIndex}' не найден");
+            if (endNodeIndex >= Nodes.Count || endNodeIndex < 0) throw new GraphOperationException($"Элемент с индексом '{endNodeIndex}' не найден");
 
-            Nodes[startNode].DeleteConnection(Nodes[endNode]);
+            AddConnection(Nodes[startNodeIndex], Nodes[endNodeIndex]);
+        }
+
+        public void AddConnectionByIds(int startNodeId, int endNodeId)
+        {
+            var startNode = GetNodeById(startNodeId);
+            var endNode = GetNodeById(endNodeId);
+
+            AddConnection(startNode, endNode);
+        }
+
+        public void DeleteConnection(Node startNode, Node endNode)
+        {
+            if (!startNode.Connections.Contains(endNode)) throw new GraphOperationException($"Заданная связь '{startNode.Id}' - '{endNode.Id}' не найдена");
+
+            startNode.DeleteConnection(endNode);
             if (!IsDirectedGraph)
-                Nodes[endNode].DeleteConnection(Nodes[startNode]);
+                endNode.DeleteConnection(startNode);
 
-            return "";
+            if (!IsSilent())
+            {
+                OnConnectionDeleted?.Invoke(new Tuple<Node, Node>(startNode, endNode));
+                OnGraphChanged?.Invoke();
+            }
         }
 
-        public string ChangeNodeValue(int ind, int newValue)
+        public void DeleteConnection(int startNodeIndex, int endNodeIndex)
         {
-            if (ind >= count || ind < 0) return $"Элемент с индексом '{ind}' не найден";
+            if (startNodeIndex >= Nodes.Count || startNodeIndex < 0) throw new GraphOperationException($"Элемент с индексом '{startNodeIndex}' не найден");
+            if (endNodeIndex >= Nodes.Count || endNodeIndex < 0) throw new GraphOperationException($"Элемент с индексом '{endNodeIndex}' не найден");
 
-            sum -= Nodes[ind].Value - newValue;
-            Nodes[ind].ChangeValue(newValue);
-
-            return "";
+            DeleteConnection(Nodes[startNodeIndex], Nodes[endNodeIndex]);
         }
 
-        public int Count() => count;
-        public int Sum() => sum;
+        public void DeleteConnectionByIds(int startNodeId, int endNodeId)
+        {
+            var startNode = GetNodeById(startNodeId);
+            var endNode = GetNodeById(endNodeId);
 
-        public int GetValue(int ind) => Nodes[ind].Value;
-        public Node GetNode(int ind) => Nodes[ind];
-        public int GetIndex(Node node) => Nodes.IndexOf(node);
+            DeleteConnection(startNode, endNode);
+        }
 
         public List<List<int>> GetAdjacencyMatrix()
         {
-            List<List<int>> matrix = new List<List<int>>(new List<int>[count]);
+            List<List<int>> matrix = new List<List<int>>(new List<int>[Nodes.Count]);
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < Nodes.Count; i++)
             {
-                matrix[i] = new List<int>(new int[count]);
+                matrix[i] = new List<int>(new int[Nodes.Count]);
                 for (int j = 0; j < Nodes[i].Connections.Count; j++)
                 {
                     int targetNodeIndex = Nodes.IndexOf(Nodes[i].Connections[j]);
@@ -121,34 +168,48 @@ namespace GraphDesigner
 
             return matrix;
         }
+
+        public Node GetNodeById(int id)
+        {
+            var node = Nodes.FirstOrDefault(n => n.Id == id);
+            if (node == null) throw new GraphOperationException($"Элемент с id = '{id}' не найден");
+            return node;
+        }
+
+        private bool IsSilent()
+        {
+            if (Silent)
+            {
+                Silent = false;
+                return true;
+            }
+            return false;
+        }
     }
 
     public class Node
     {
         public int Id;
-        public int Value;
         public List<Node> Connections;
 
-        public Node(int id, int value)
+        public Node(int id)
         {
             Id = id;
-            Value = value;
             Connections = new List<Node>();
         }
 
         public void AddConnection(Node a)
         {
+            if (a == null) throw new GraphOperationException("Элемент, с которым добавляется связь не найден");
+
             Connections.Add(a);
         }
 
         public void DeleteConnection(Node a)
         {
-            Connections.Remove(a);
-        }
+            if (a == null) throw new GraphOperationException("Элемент, с которым добавляется связь не найден");
 
-        public void ChangeValue(int newValue)
-        {
-            Value = newValue;
+            Connections.Remove(a);
         }
     }
 }

@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{B33348C7-0EC7-4C93-91AA-984A9ECEC99A}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>KLaba1v2</RootNamespace>
-    <AssemblyName>KLaba1v2</AssemblyName>
+    <RootNamespace>GraphDesigner</RootNamespace>
+    <AssemblyName>GraphDesigner</AssemblyName>
     <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -67,6 +67,7 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="GraphOperationException.cs" />
     <Compile Include="MalgrangeAlgorithm.cs" />
     <Compile Include="Net.cs" />
     <Compile Include="Presets.cs" />

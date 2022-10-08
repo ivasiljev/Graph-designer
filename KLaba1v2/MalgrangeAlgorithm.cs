@@ -15,7 +15,7 @@ namespace GraphDesigner
         public List<Net> Execute(Net net)
         {
             var result = new List<Net>();
-            N = net.Count();
+            N = net.Nodes.Count;
             var g = net.GetAdjacencyMatrix();
 
             List<int> nodes = new List<int>(N);
@@ -31,7 +31,7 @@ namespace GraphDesigner
 
                 var newNet = new Net(net.IsDirectedGraph);
                 foreach (var node in component)
-                    newNet.AddNode(net.GetNode(node).Id, 0);
+                    newNet.AddNode(net.GetNode(node).Id);
 
                 for (int i = 0; i < component.Count; i++)
                     for (int j = 0; j < component.Count; j++)
