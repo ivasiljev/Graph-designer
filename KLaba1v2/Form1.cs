@@ -8,12 +8,27 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using DrawingColor = Microsoft.Msagl.Drawing.Color;
 
 namespace GraphDesigner
 {
     public partial class Form1 : Form
     {
         private Net net;
+
+        public Net Net 
+        { 
+            get => net; 
+            set
+            {
+                if (net != null) UnsubscribeFromNetEvents();
+                net = value;
+                SyncGraphViewer();
+                UpdateView();
+                SubscribeOnNetEvents();
+                GraphChanged();
+            }
+        }
         private Form adjacencyMatrixForm;
 
         public delegate void AdjacencyMatrixUpdatedHandler(Net net);
@@ -27,11 +42,28 @@ namespace GraphDesigner
                 presetsDropdown.Items.Add(preset.Name);
             presetsDropdown.SelectedIndex = 0;
 
-            net = new Net(true);
-            RefreshViewer();
+            Net = new Net(true);
         }
 
-        void RefreshViewer()
+        private void UpdateView()
+        {
+            if (net.IsDirectedGraph)
+            {
+                lblArrow1.Text = "→";
+                lblArrow2.Text = "→";
+                radioGraphType1.Checked = true;
+                radioGraphType2.Checked = false;
+            }
+            else
+            {
+                lblArrow1.Text = "—";
+                lblArrow2.Text = "—";
+                radioGraphType1.Checked = false;
+                radioGraphType2.Checked = true;
+            }
+        }
+
+        private void SyncGraphViewer()
         {
             Graph graph = new Graph();
             foreach (var node in net.Nodes)
@@ -44,11 +76,59 @@ namespace GraphDesigner
             }
 
             gViewer.Graph = graph;
+        }
+
+        private void SubscribeOnNetEvents()
+        {
+            net.OnNodeAdded += NodeAdded;
+            net.OnNodeDeleted += NodeDeleted;
+            net.OnConnectionAdded += ConnectionAdded;
+            net.OnConnectionDeleted += ConnectionDeleted;
+            net.OnGraphChanged += GraphChanged;
+        }
+
+        private void UnsubscribeFromNetEvents()
+        {
+            net.OnNodeAdded -= NodeAdded;
+            net.OnNodeDeleted -= NodeDeleted;
+            net.OnConnectionAdded -= ConnectionAdded;
+            net.OnConnectionDeleted -= ConnectionDeleted;
+            net.OnGraphChanged -= GraphChanged;
+        }
+
+        private void GraphChanged()
+        {
+            gViewer.Graph = gViewer.Graph; // Force redrawing graph
 
             if (Application.OpenForms.OfType<AdjacencyMatrix>().Count() > 0)
             {
                 AdjacencyMatrixUpdatedEventHandler?.Invoke(net);
             }
+        }
+
+        private void ConnectionDeleted(Tuple<Node, Node> connection)
+        {
+            var targetEdge = gViewer.Graph.Edges.FirstOrDefault(e => e.Source == connection.Item1.Id.ToString() && e.Target == connection.Item2.Id.ToString());
+            if (targetEdge == null)
+                throw new Exception($"Failed to delete connection {connection.Item1.Id} - {connection.Item2.Id} from gViewer");
+
+            gViewer.Graph.RemoveEdge(targetEdge);
+        }
+
+        private void ConnectionAdded(Tuple<Node, Node> connection)
+        {
+            gViewer.Graph.AddEdge(connection.Item1.Id.ToString(), connection.Item2.Id.ToString());
+        }
+
+        private void NodeDeleted(Node node)
+        {
+            var targetNode = gViewer.Graph.FindNode(node.Id.ToString());
+            gViewer.Graph.RemoveNode(targetNode);
+        }
+
+        private void NodeAdded(Node node)
+        {
+            gViewer.Graph.AddNode(node.Id.ToString());
         }
 
         private void btnAddElem_Click(object sender, EventArgs e)
@@ -59,16 +139,12 @@ namespace GraphDesigner
 
         private void btnCreateNet_Click(object sender, EventArgs e)
         {
-            net = new Net();
-            RefreshViewer();
-            checkBoxGraphType.Checked = false;
+            Net = new Net();
         }
 
         private void btnCreateDirectedGraph_Click(object sender, EventArgs e)
         {
-            net = new Net(true);
-            RefreshViewer();
-            checkBoxGraphType.Checked = true;
+            Net = new Net(true);
         }
 
         private void btnDelElem_Click(object sender, EventArgs e)
@@ -92,20 +168,20 @@ namespace GraphDesigner
                 adjacencyMatrixForm.Close();
 
             adjacencyMatrixForm = new AdjacencyMatrix(net);
-            adjacencyMatrixForm.StartPosition = FormStartPosition.CenterParent;
+            adjacencyMatrixForm.StartPosition = FormStartPosition.CenterScreen;
             adjacencyMatrixForm.Show(this);
         }
 
-        List<Microsoft.Msagl.Drawing.Color> colors = new List<Microsoft.Msagl.Drawing.Color>()
+        List<DrawingColor> colors = new List<DrawingColor>()
         {
-            Microsoft.Msagl.Drawing.Color.Red,
-            Microsoft.Msagl.Drawing.Color.Green,
-            Microsoft.Msagl.Drawing.Color.Blue,
-            Microsoft.Msagl.Drawing.Color.Magenta,
-            Microsoft.Msagl.Drawing.Color.Yellow,
-            Microsoft.Msagl.Drawing.Color.Aqua,
-            Microsoft.Msagl.Drawing.Color.MintCream,
-            Microsoft.Msagl.Drawing.Color.Coral,
+            DrawingColor.Red,
+            DrawingColor.Green,
+            DrawingColor.Blue,
+            DrawingColor.Magenta,
+            DrawingColor.Yellow,
+            DrawingColor.Aqua,
+            DrawingColor.MintCream,
+            DrawingColor.Coral,
         };
 
         private void btnExecuteMalgrangeAlgo_Click(object sender, EventArgs e)
@@ -128,15 +204,14 @@ namespace GraphDesigner
 
         private void btnUsePreset_Click(object sender, EventArgs e)
         {
-            net = Presets.Get()[presetsDropdown.SelectedIndex].Execute();
-            RefreshViewer();
+            Net = Presets.Get()[presetsDropdown.SelectedIndex].Execute();
         }
 
         private void gViewer_EdgeAdded(object sender, EventArgs e)
         {
             var edge = (Edge)sender;
-            var startNodeId = Int32.Parse(edge.Source);
-            var endNodeId = Int32.Parse(edge.Target);
+            var startNodeId = int.Parse(edge.Source);
+            var endNodeId = int.Parse(edge.Target);
 
             net.Silent = true;
             net.AddConnectionByIds(startNodeId, endNodeId);

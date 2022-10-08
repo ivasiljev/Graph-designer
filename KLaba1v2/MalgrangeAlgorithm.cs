@@ -31,7 +31,7 @@ namespace GraphDesigner
 
                 var newNet = new Net(net.IsDirectedGraph);
                 foreach (var node in component)
-                    newNet.AddNode(net.GetNode(node).Id);
+                    newNet.AddNode(net.Nodes[node].Id);
 
                 for (int i = 0; i < component.Count; i++)
                     for (int j = 0; j < component.Count; j++)
