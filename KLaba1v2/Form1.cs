@@ -305,5 +305,18 @@ namespace GraphDesigner
                 tbAddCon2.Text = secondNodeId;
             }
         }
+
+        private void btnConsoleWritePreset_Click(object sender, EventArgs e)
+        {
+            Console.WriteLine("-------->Print preset connections:");
+            foreach (var node in Graph.Nodes)
+            {
+                foreach (var targetNode in node.Connections)
+                {
+                    Console.WriteLine($"graph.AddConnection({Graph.Nodes.IndexOf(node)}, {Graph.Nodes.IndexOf(targetNode)});");
+                }
+            }
+            Console.WriteLine("-------->End of preset connections list");
+        }
     }
 }
